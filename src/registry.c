@@ -21,7 +21,7 @@
 
 --*/
 
-#include <nt36xxx\ntinternal.h>
+#include <S6SY761Touch\ntinternal.h>
 #include <registry.tmh>
 #include <internal.h>
 

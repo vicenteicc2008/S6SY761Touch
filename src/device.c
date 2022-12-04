@@ -28,9 +28,9 @@
 #include <hid.h>
 #include <gpio.h>
 #include <device.h>
-#include <nt36xxx/ntinternal.h>
+#include <S6SY761Touch\ntinternal.h>
 #include <report.h>
-#include <touch_power/touch_power.h>
+#include <touch_power\touch_power.h>
 #include <device.tmh>
 
 #ifdef ALLOC_PRAGMA

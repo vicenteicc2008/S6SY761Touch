@@ -23,7 +23,7 @@
 #include <Cross Platform Shim\compat.h>
 #include <internal.h>
 #include <controller.h>
-#include <nt36xxx\ntinternal.h>
+#include <S6SY761Touch\ntinternal.h>
 #include <hid.h>
 #include <hid.tmh>
 

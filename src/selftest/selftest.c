@@ -23,7 +23,7 @@
 
 #include <internal.h>
 #include <controller.h>
-#include <nt36xxx\ntinternal.h>
+#include <S6SY761Touch\ntinternal.h>
 #include <spb.h>
 #include <initguid.h>
 #include <devguid.h>

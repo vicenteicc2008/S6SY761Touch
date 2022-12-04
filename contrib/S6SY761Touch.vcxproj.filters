@@ -87,7 +87,7 @@
     <ClCompile Include="..\src\report.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\nt36xxx\ntinternal.c" />
+    <ClCompile Include="..\src\S6SY761Touch\ntinternal.c" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\Resource.rc">
@@ -95,9 +95,7 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="..\src\nt36xxx.inf">
-      <Filter>Driver Files</Filter>
-    </Inf>
+    <Inf Include="..\src\S6SY761Touch.inf" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\controller.h">
@@ -160,6 +158,6 @@
     <ClInclude Include="..\include\report.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\nt36xxx\ntinternal.h" />
+    <ClInclude Include="..\include\S6SY761Touch\ntinternal.h" />
   </ItemGroup>
 </Project>

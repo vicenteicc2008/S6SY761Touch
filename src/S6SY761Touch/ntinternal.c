@@ -21,7 +21,7 @@
 #include <Cross Platform Shim\compat.h>
 #include <spb.h>
 #include <report.h>
-#include <nt36xxx\ntinternal.h>
+#include <S6SY761Touch\ntinternal.h>
 #include <ntinternal.tmh>
 
 NTSTATUS
