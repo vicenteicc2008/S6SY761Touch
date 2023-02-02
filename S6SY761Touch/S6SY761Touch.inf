@@ -9,7 +9,7 @@
 ;Copyright (c) 2017  Andi Shyti <andi@etezian.org>
 ;                    Andi Shyti <andi.shyti@samsung.com>
 ;
-;Copyright (c) 2022 - 2023  Morc - Richard Gr·Ëik
+;Copyright (c) 2022 - 2023  Morc - Richard Gr√°ƒçik
 ;
 
 [Version]
@@ -70,7 +70,7 @@ KMDriverCopy=12
 ;---------------------------------------------------------------;
 
 [Strings]
-ProviderString     = "Morc - Richard Gr·Ëik"
+ProviderString     = "Morc - Richard Gr√°ƒçik"
 ManufacturerString = "Samsung Electronics Co."
 DeviceDesc         = "Samsung SEC-S6SY761 Touchscreen Controller Device"
 ServiceDesc        = "Samsung SEC-S6SY761 Touchscreen Controller Service"
