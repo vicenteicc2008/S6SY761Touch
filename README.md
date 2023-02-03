@@ -1,4 +1,4 @@
-# Samsung S6SY761 Touchscreen Controller Driver for Windows
+# Samsung SEC-S6SY761 Touchscreen Controller Driver for Windows
 In this repository you can find the S6SY761 controller driver for Windows (KMDF).
 This driver has been only tested with S6SY761 controller found in OnePlus 7 Pro and 7T Pro.
 
