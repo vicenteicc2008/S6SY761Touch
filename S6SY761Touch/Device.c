@@ -2066,7 +2066,6 @@ OnInterruptIsr(
 
 --*/
 {
-	//BOOLEAN               fNotificationSent;
 	WDFDEVICE               device;
 	PDEVICE_CONTEXT         pDevice;
 	int                     remain, x, y, reported;
@@ -2113,7 +2112,7 @@ OnInterruptIsr(
 
 	// handle the events now
 	reported = 0;
-	for (int i = 0; i < remain; ++i)
+	for (int i = 0; i <= remain; ++i)
 	{
 		event = &eventbuf[i * S6SY761_EVENT_SIZE];
 		event_id = event[0] & S6SY761_MASK_EID;
@@ -2165,7 +2164,7 @@ OnInterruptIsr(
 	}
 
 	// XXX contact count 0-8, chip reports 0-32
-    readReport.DIG_TouchScreenContactCount = (BYTE)reported + 1;
+    readReport.DIG_TouchScreenContactCount = (BYTE)reported;
 	status = WdfIoQueueRetrieveNextRequest(
 		pDevice->ManualQueue,
 		&request);
