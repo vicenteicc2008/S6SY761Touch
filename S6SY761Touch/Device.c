@@ -87,12 +87,16 @@ RequestGetHidXferPacket_ToWriteToDevice(
 #define S6SY761_TS_MOVE 0x02
 #define S6SY761_TS_RELEASE 0x03
 
-BYTE cmd_readevents[1] = { 0x61 }; //read all events
-BYTE cmd_readevent[1] = { 0x60 }; //read single event
-BYTE cmd_drain[1] = { 0x62 }; //drain all last commands
-BYTE cmd_sense[1] = { 0x10 }; //enable sensing
+/* event id */
+#define S6SY761_EVENT_ID_COORDINATE	0x00
+#define S6SY761_EVENT_ID_STATUS		0x01
+
+BYTE S6SY761_READ_ALL_EVENTS[1] = { 0x61 }; //read all events
+BYTE S6SY761_READ_ONE_EVENT[1] = { 0x60 }; //read single event
+BYTE S6SY761_CLEAR_EVENT_STACK[1] = { 0x62 }; //drain all last commands
+BYTE S6SY761_SENSE_ON[1] = { 0x10 }; //enable sensing
+
 UINT8 eventbuf[S6SY761_EVENT_SIZE * S6SY761_EVENT_COUNT];
-UINT8 singleEventBuf[S6SY761_EVENT_SIZE];
 
 ULONG XRevert = 0;
 ULONG YRevert = 0;
@@ -704,6 +708,9 @@ PowerSettingCallback(
 {
 	NTSTATUS status = STATUS_SUCCESS;
 	PDEVICE_CONTEXT devContext = NULL;
+	UNREFERENCED_PARAMETER(SettingGuid);
+	UNREFERENCED_PARAMETER(ValueLength);
+	UNREFERENCED_PARAMETER(Value);
 
 	DbgPrint("PowerSettingsCallback");
 
@@ -718,7 +725,7 @@ PowerSettingCallback(
 	}
 
 	devContext = (PDEVICE_CONTEXT)Context;
-
+	
 
 exit:
 	return status;
@@ -2059,98 +2066,125 @@ OnInterruptIsr(
 
 --*/
 {
-	BOOLEAN fInterruptRecognized = TRUE;
-	//BOOLEAN fNotificationSent;
-	WDFDEVICE device;
-	PDEVICE_CONTEXT pDevice;
-	int remain;
-	NTSTATUS status;
+	//BOOLEAN               fNotificationSent;
+	WDFDEVICE               device;
+	PDEVICE_CONTEXT         pDevice;
+	int                     remain, x, y, reported;
+	NTSTATUS                status;
 	WDFREQUEST              request;
-	inputReport54_t    readReport;
-	BYTE touchType;
-	BYTE touchId;
-	int x, y;
+	inputReport54_t         readReport;
+	BYTE                    touchType, touchId;
+	UINT8					event_id, * event;
 	UNREFERENCED_PARAMETER(MessageID);
 
 	device = WdfInterruptGetDevice(FxInterrupt);
 	pDevice = GetDeviceContext(device);
 
-	//get all event data
-	SpbDeviceWriteRead(pDevice, cmd_readevent, &eventbuf[0], 1, S6SY761_EVENT_SIZE);
-
+	// get some
+	status = SpbDeviceWriteRead(pDevice, S6SY761_READ_ONE_EVENT, eventbuf, 1, S6SY761_EVENT_SIZE);
+	if (!NT_SUCCESS(status))
+	{
+		// TODO dev_err(&sdata->client->dev, "failed to read events\n");
+		return TRUE;
+	}
+	if (!eventbuf[0])
+	{
+		return TRUE;
+	}
 	//interrupt single event print
-	//DbgPrint("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\n", singleEventBuf[0], singleEventBuf[1], singleEventBuf[2], singleEventBuf[3], singleEventBuf[4], singleEventBuf[5], singleEventBuf[6], singleEventBuf[7]);
+	//DbgPrint("%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X\n", eventbuf[0], eventbuf[1], eventbuf[2], eventbuf[3], eventbuf[4], eventbuf[5], eventbuf[6], eventbuf[7]);
 
-	UINT8 event_id = eventbuf[0] & S6SY761_MASK_EID;
-
-	if (event_id == 0x00) {
-
-		//multitouch event handler
-		remain = eventbuf[7] & S6SY761_MASK_LEFT_EVENTS;
-
-		if (remain)
+	// get some more
+	remain = eventbuf[7] & S6SY761_MASK_LEFT_EVENTS;
+	if (remain > S6SY761_EVENT_COUNT - 1)
+	{
+		return TRUE;
+	}
+	if (remain)
+	{
+        //DbgPrint("events remaining: %d\n", remain);
+        status = SpbDeviceWriteRead(pDevice, S6SY761_READ_ALL_EVENTS, eventbuf + S6SY761_EVENT_SIZE, 1, remain * S6SY761_EVENT_SIZE);
+		if (!NT_SUCCESS(status))
 		{
-			//DbgPrint("events remaining: %d\n", remain);
-			SpbDeviceWriteRead(pDevice, cmd_readevents, &eventbuf[8], 1, remain * S6SY761_EVENT_SIZE);
-		}
-
-		for (int i = 0; i < remain + 1; i++) {
-			UINT8* event = &eventbuf[i * S6SY761_EVENT_SIZE];
-			UINT8 event_id = event[0] & S6SY761_MASK_EID;
-
-			readReport.DIG_TouchScreenContactCount = (BYTE)remain + 1;
-
-			switch (event_id)
-			{
-			case 0x00: //EVENT_ID_COORDINATES
-				touchId = ((event[0] & S6SY761_MASK_TID) >> 2) - 1;
-				touchType = (event[0] & S6SY761_MASK_TOUCH_STATE) >> 6;
-				x = (event[1] << 4) | ((event[3] & 0xf0) >> 4);
-				y = (event[2] << 4) | (event[3] & 0x0f);
-
-				switch (touchType) {
-				case S6SY761_TS_NONE:
-					break;
-				case S6SY761_TS_RELEASE:
-					readReport.points[i * 6 + 0] = 0x06;
-					//DbgPrint("release tid: %d\n", touchId);
-					break;
-				case S6SY761_TS_MOVE:
-				case S6SY761_TS_PRESS:
-					readReport.points[i * 6 + 0] = 0x07;
-					readReport.points[i * 6 + 1] = touchId;
-					readReport.points[i * 6 + 2] = x & 0xFF;
-					readReport.points[i * 6 + 3] = (x >> 8) & 0x0F;
-					readReport.points[i * 6 + 4] = y & 0xFF;
-					readReport.points[i * 6 + 5] = (y >> 8) & 0x0F;
-					//DbgPrint("move/press tid: %d\tx: %d\ty: %d remain:%d\n", touchId, x, y, remain);
-					break;
-				}
-
-				break;
-
-			default:
-				break;
-			}
+			// TODO dev_err(&sdata->client->dev, "failed to read events\n");
+			return TRUE;
 		}
 	}
 
+	// handle the events now
+	reported = 0;
+	for (int i = 0; i < remain; ++i)
+	{
+		event = &eventbuf[i * S6SY761_EVENT_SIZE];
+		event_id = event[0] & S6SY761_MASK_EID;
+		if (!event[0])
+		{
+			break;
+		}
+
+		switch (event_id)
+		{
+		case S6SY761_EVENT_ID_COORDINATE:
+			if (!(event[0] & S6SY761_MASK_TID))
+			{
+				break;
+			}
+            touchId = ((event[0] & S6SY761_MASK_TID) >> 2) - 1;
+            touchType = (event[0] & S6SY761_MASK_TOUCH_STATE) >> 6;
+            x = (event[1] << 4) | ((event[3] & 0xf0) >> 4);
+            y = (event[2] << 4) | (event[3] & 0x0f);
+
+            switch (touchType)
+            {
+            case S6SY761_TS_NONE:
+                break;
+            case S6SY761_TS_RELEASE:
+                readReport.points[reported * 6 + 0] = 0x06;
+				++reported;
+                //DbgPrint("release tid: %d\n", touchId);
+                break;
+            case S6SY761_TS_MOVE:
+            case S6SY761_TS_PRESS:
+                readReport.points[reported * 6 + 0] = 0x07;
+                readReport.points[reported * 6 + 1] = touchId;
+                readReport.points[reported * 6 + 2] = x & 0xFF;
+                readReport.points[reported * 6 + 3] = (x >> 8) & 0x0F;
+                readReport.points[reported * 6 + 4] = y & 0xFF;
+                readReport.points[reported * 6 + 5] = (y >> 8) & 0x0F;
+				++reported;
+                //DbgPrint("move/press tid: %d\tx: %d\ty: %d remain:%d\n", touchId, x, y, remain);
+                break;
+            }
+
+			break;
+		case S6SY761_EVENT_ID_STATUS:
+			break;
+		default:
+			break;
+		}
+	}
+
+	// XXX contact count 0-8, chip reports 0-32
+    readReport.DIG_TouchScreenContactCount = (BYTE)reported + 1;
 	status = WdfIoQueueRetrieveNextRequest(
 		pDevice->ManualQueue,
 		&request);
 
-	if (NT_SUCCESS(status)) {
-
-		readReport.reportId = CONTROL_FEATURE_REPORT_ID;
-
-		status = RequestCopyFromBuffer(request,
-			&readReport,
-			sizeof(readReport));
-
-		WdfRequestComplete(request, status);
+	if (!NT_SUCCESS(status))
+	{
+		// TODO dev_err failed to retrieve next request
+		return TRUE;
 	}
 
-	return fInterruptRecognized;
+    readReport.reportId = CONTROL_FEATURE_REPORT_ID;
+
+    status = RequestCopyFromBuffer(request,
+                                   &readReport,
+                                   sizeof(readReport));
+
+    WdfRequestComplete(request, status);
+
+	return TRUE;
 }
 VOID
 SpbDeviceOpen(
@@ -2187,13 +2221,13 @@ SpbDeviceOpen(
 	}
 
 	DbgPrint("sense enable\n");
-	SpbDeviceWrite(pDevice, cmd_sense, 1);
+	SpbDeviceWrite(pDevice, S6SY761_SENSE_ON, 1);
 
 	DbgPrint("reading events\n");
-	SpbDeviceWrite(pDevice, cmd_readevents, 1);
+	SpbDeviceWrite(pDevice, S6SY761_READ_ALL_EVENTS, 1);
 
 	DbgPrint("draining last events\n");
-	SpbDeviceWriteRead(pDevice, cmd_drain, eventbuf, 1, 256);
+	SpbDeviceWriteRead(pDevice, S6SY761_CLEAR_EVENT_STACK, eventbuf, 1, 256);
 
 	DbgPrint("enabling Interrupt\n");
 	WdfInterruptEnable(pDevice->Interrupt);
@@ -2238,7 +2272,7 @@ SpbDeviceWrite(
 	}
 }
 
-VOID
+HRESULT
 SpbDeviceWriteRead(
 	_In_ PDEVICE_CONTEXT pDevice,
 	_In_ PVOID pInputBuffer,
@@ -2269,7 +2303,7 @@ SpbDeviceWriteRead(
 
 	if (!NT_SUCCESS(status))
 	{
-		return;
+		return status;
 	}
 
 	WDF_MEMORY_DESCRIPTOR_INIT_BUFFER(&outMemoryDescriptor,
@@ -2287,7 +2321,10 @@ SpbDeviceWriteRead(
 
 	if (!NT_SUCCESS(status))
 	{
+		return status;
 	}
+
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS

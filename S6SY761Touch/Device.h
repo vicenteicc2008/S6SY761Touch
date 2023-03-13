@@ -196,7 +196,7 @@ SpbDeviceWrite(
     _In_ PVOID pInputBuffer,
     _In_ size_t inputBufferLength
 );
-VOID
+HRESULT
 SpbDeviceWriteRead(
     _In_ PDEVICE_CONTEXT pDevice,
     _In_ PVOID pInputBuffer,
