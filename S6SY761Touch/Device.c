@@ -2139,6 +2139,7 @@ OnInterruptIsr(
                 break;
             case S6SY761_TS_RELEASE:
                 readReport.points[reported * 6 + 0] = 0x06;
+                readReport.points[reported * 6 + 1] = touchId;
 				++reported;
                 //DbgPrint("release tid: %d\n", touchId);
                 break;
@@ -2161,9 +2162,14 @@ OnInterruptIsr(
 		default:
 			break;
 		}
+
+        // DIG_TouchScreenContactCount is 0-8
+		if (reported >= 8)
+		{
+			break;
+		}
 	}
 
-	// XXX contact count 0-8, chip reports 0-32
     readReport.DIG_TouchScreenContactCount = (BYTE)reported;
 	status = WdfIoQueueRetrieveNextRequest(
 		pDevice->ManualQueue,
