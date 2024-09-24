@@ -46,7 +46,7 @@ HKR,,"XYExchange",0x00010001,0
 HKR,,"XMin",0x00010001,0
 HKR,,"XMax",0x00010001,1440
 HKR,,"YMin",0x00010001,0
-HKR,,"YMax",0x00010001,3120
+HKR,,"YMax",0x00010001,2960
 
 [S6SY761Touch_Service_Inst]
 DisplayName    = %ServiceDesc%

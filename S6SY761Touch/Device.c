@@ -104,7 +104,7 @@ ULONG XYExchange = 0;
 ULONG XMin = 0;
 ULONG XMax = 1440;
 ULONG YMin = 0;
-ULONG YMax = 3120;
+ULONG YMax = 2960;
 
 #define DEFINE_GUID2(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
         EXTERN_C const GUID DECLSPEC_SELECTANY name \
